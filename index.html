@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>بینا – سیستم پرسش و پاسخ Excel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        :root {
+            color-scheme: light dark;
+            font-family: "IRANSans", "Vazirmatn", "Tahoma", sans-serif;
+            --primary: #005b96;
+            --primary-light: #d2e4f5;
+            --surface: rgba(255, 255, 255, 0.75);
+            --border: rgba(0, 91, 150, 0.2);
+            --shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f1f7ff, #e4edf7);
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            padding: 2rem 1rem;
+            box-sizing: border-box;
+        }
+
+        .chat-shell {
+            background: var(--surface);
+            backdrop-filter: blur(16px);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            width: min(1100px, 100%);
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        header {
+            grid-column: 1 / -1;
+            background: rgba(0, 91, 150, 0.08);
+            border-bottom: 1px solid var(--border);
+            padding: 1.2rem 2rem;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.4rem;
+            color: var(--primary);
+        }
+
+        header p {
+            margin: 0.4rem 0 0;
+            color: #476481;
+            font-size: 0.95rem;
+        }
+
+        .sidebar {
+            border-left: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.4);
+            padding: 1.5rem 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+
+        .chat-main {
+            padding: 1.5rem 1.5rem 2.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            overflow: hidden;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            font-size: 0.95rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+            white-space: nowrap;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 91, 150, 0.15);
+        }
+
+        .summary-card {
+            border-radius: 16px;
+            padding: 1.2rem;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid var(--border);
+        }
+
+        .summary-card h2 {
+            margin-top: 0;
+            font-size: 1.05rem;
+            color: #123c69;
+        }
+
+        .summary-card ul {
+            margin: 0.6rem 0 0;
+            padding: 0 1rem;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .conversation {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+            padding-inline-end: 0.6rem;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 0.85rem 1rem;
+            border-radius: 16px;
+            position: relative;
+            line-height: 1.7;
+            font-size: 0.95rem;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+            background: #ffffff;
+            border: 1px solid rgba(18, 60, 105, 0.1);
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            border-top-right-radius: 4px;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: var(--primary);
+            color: #ffffff;
+            border-top-left-radius: 4px;
+        }
+
+        .message .meta {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+
+        .message .tags {
+            margin-top: 0.6rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .message .tag {
+            background: rgba(0, 91, 150, 0.12);
+            color: #00436c;
+            border-radius: 999px;
+            padding: 0.2rem 0.6rem;
+            font-size: 0.75rem;
+        }
+
+        .message.user .tag {
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+        }
+
+        .doc-context {
+            border-radius: 14px;
+            padding: 1rem;
+            background: rgba(210, 228, 245, 0.5);
+            border: 1px solid rgba(0, 91, 150, 0.2);
+            font-size: 0.85rem;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.8rem;
+            border-radius: 999px;
+            background: rgba(0, 153, 102, 0.12);
+            color: #007a55;
+            font-size: 0.8rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            margin-top: 3rem;
+            color: #5c708a;
+        }
+
+        @media (max-width: 960px) {
+            .chat-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                border-left: none;
+                border-top: 1px solid var(--border);
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="chat-shell">
+    <header>
+        <h1>گزارش بررسی چت «سیستم پرسش و پاسخ Excel»</h1>
+        <p>مرور کامل مکالمه‌ نمونه در پروژه بینا برای ارزیابی کیفیت پاسخ‌گویی مبتنی بر اسناد راهنمای Excel.</p>
+    </header>
+
+    <section class="chat-main" aria-label="گفتگو">
+        <div class="search-box">
+            <label class="visually-hidden" for="search">جست‌وجوی پیام</label>
+            <input id="search" type="search" placeholder="جست‌وجوی پرسش یا پاسخ…" autocomplete="off">
+        </div>
+
+        <div id="conversation" class="conversation" role="log" aria-live="polite"></div>
+        <p id="emptyState" class="empty-state" hidden>پیامی با این عبارت پیدا نشد.</p>
+    </section>
+
+    <aside class="sidebar" aria-label="جزئیات گفتگو">
+        <div class="summary-card">
+            <h2>جمع‌بندی</h2>
+            <p class="status-pill">وضعیت بررسی: کامل شد</p>
+            <ul>
+                <li>پاسخ‌ها مستقیماً از سند «راهنمای فرمول‌های Excel 2024» استخراج شده‌اند.</li>
+                <li>تمرکز مکالمه بر تحلیل فرمول‌ها و رفع خطاهای متداول است.</li>
+                <li>کیفیت پاسخ‌ها با ارجاع به صفحات مستند و مثال‌های عملی تایید شده است.</li>
+            </ul>
+        </div>
+
+        <div class="summary-card">
+            <h2>کلیدواژه‌ها</h2>
+            <div class="doc-context">
+                SUMIFS، XLOOKUP، قالب‌بندی شرطی، Data Validation، Pivot Table
+            </div>
+        </div>
+
+        <div class="summary-card">
+            <h2>دسترسی سریع</h2>
+            <div class="doc-context">
+                صفحه 32: فرمول‌های شرطی<br>
+                صفحه 44: مدیریت خطای #VALUE!<br>
+                صفحه 58: اعتبارسنجی داده‌ها<br>
+                ضمیمه B: ساختار جدول‌های محوری
+            </div>
+        </div>
+    </aside>
+</div>
+
+<script>
+    const conversationLog = [
+        {
+            role: "user",
+            timestamp: "۱۴۰۳/۰۲/۲۴ - ۰۹:۱۲",
+            text: "می‌خواهم مجموع فروش به تفکیک منطقه و سال را حساب کنم. از چه فرمولی استفاده کنم که بتوانم هم منطقه و هم سال را شرط بگذارم؟",
+            tags: ["تحلیل فروش", "فیلتر ترکیبی"]
+        },
+        {
+            role: "assistant",
+            timestamp: "۱۴۰۳/۰۲/۲۴ - ۰۹:۱۲",
+            text: "برای اعمال دو شرط همزمان، از فرمول <strong>SUMIFS</strong> استفاده کنید. ساختار کلی آن در صفحه ۳۲ سند راهنما آمده است. مثال: <code>=SUMIFS(Table1[Amount], Table1[Region], \"شمال\", Table1[Year], 2023)</code>. قبل از اعمال فرمول، مطمئن شوید ستون‌ها به صورت <em>Table</em> تعریف شده‌اند تا ارجاعات پویا باشند.",
+            tags: ["SUMIFS", "صفحه ۳۲", "Table"]
+        },
+        {
+            role: "user",
+            timestamp: "۱۴۰۳/۰۲/۲۴ - ۰۹:۱۹",
+            text: "وقتی مقدار سال را از سلول دیگری می‌خوانم خطای #VALUE! می‌گیرم. دلیلش چیست؟",
+            tags: ["خطای #VALUE!"]
+        },
+        {
+            role: "assistant",
+            timestamp: "۱۴۰۳/۰۲/۲۴ - ۰۹:۲۰",
+            text: "در صفحه ۴۴ توضیح داده شده که منشأ رایج این خطا ناسازگاری نوع داده است. اگر سال را از سلولی می‌خوانید که به صورت متن ذخیره شده، SUMIFS آن را عدد تلقی نمی‌کند. سلول مرجع را با <code>VALUE()</code> یا تغییر فرمت به Number تصحیح کنید. همچنین مطمئن شوید فاصله یا کاراکتر مخفی وجود نداشته باشد.",
+            tags: ["صفحه ۴۴", "تبدیل نوع داده"]
+        },
+        {
+            role: "user",
+            timestamp: "۱۴۰۳/۰۲/۲۴ - ۰۹:۳۲",
+            text: "می‌توانم به جای SUMIFS از XLOOKUP استفاده کنم تا جدول مرجع را ساده‌تر بخوانم؟",
+            tags: ["XLOOKUP", "جایگزین"]
+        },
+        {
+            role: "assistant",
+            timestamp: "۱۴۰۳/۰۲/۲۴ - ۰۹:۳۳",
+            text: "XLOOKUP برای بازیابی مقدار تک سلولی مناسب است، اما برای جمع‌زدن چند رکورد استفاده نمی‌شود. در صفحه ۴۹ مقایسه‌ای بین XLOOKUP و SUMIFS آمده است. اگر به دنبال استفاده از توابع پویا هستید، می‌توانید از <code>LET</code> برای خوانایی بیشتر فرمول SUMIFS کمک بگیرید.",
+            tags: ["صفحه ۴۹", "LET"]
+        },
+        {
+            role: "user",
+            timestamp: "۱۴۰۳/۰۲/۲۴ - ۱۰:۰۲",
+            text: "برای جلوگیری از ورود مقادیر منفی در ستون فروش چه پیشنهادی دارید؟",
+            tags: ["Data Validation"]
+        },
+        {
+            role: "assistant",
+            timestamp: "۱۴۰۳/۰۲/۲۴ - ۱۰:۰۳",
+            text: "در صفحه ۵۸ سند، از بخش Data Validation الگوی «Whole number greater than or equal to 0» معرفی شده است. با فعال‌سازی پیام خطا (Error Alert) می‌توانید پیغام مناسبی نمایش دهید و ورود داده‌ی نامعتبر را متوقف کنید.",
+            tags: ["صفحه ۵۸", "Error Alert"]
+        },
+        {
+            role: "user",
+            timestamp: "۱۴۰۳/۰۲/۲۴ - ۱۰:۲۵",
+            text: "خروجی Pivot Table من ترتیب ماه‌ها را به هم ریخته است. راه‌حلی وجود دارد؟",
+            tags: ["Pivot Table"]
+        },
+        {
+            role: "assistant",
+            timestamp: "۱۴۰۳/۰۲/۲۴ - ۱۰:۲۶",
+            text: "در ضمیمه B توضیح داده شده که برای حفظ ترتیب زمانی، فیلد تاریخ باید به صورت Date ذخیره شود. سپس در PivotTable Options گزینه «Sort items by data source order» را فعال کنید. اگر داده‌ها از Power Query می‌آیند، ستون ماه را به نوع <strong>Date</strong> تبدیل کنید تا ترتیب تقویمی حفظ شود.",
+            tags: ["ضمیمه B", "Sort items"]
+        }
+    ];
+
+    const conversationContainer = document.getElementById("conversation");
+    const emptyState = document.getElementById("emptyState");
+    const searchInput = document.getElementById("search");
+
+    function renderMessages(filterText = "") {
+        const trimmedFilter = filterText.trim();
+        const normalizedFilter = trimmedFilter.toLowerCase();
+        const filtered = trimmedFilter
+            ? conversationLog.filter(item =>
+                item.text.toLowerCase().includes(normalizedFilter) ||
+                item.tags.some(tag => tag.toLowerCase().includes(normalizedFilter))
+            )
+            : conversationLog;
+
+        conversationContainer.innerHTML = "";
+
+        if (!filtered.length) {
+            emptyState.hidden = false;
+            return;
+        }
+
+        emptyState.hidden = true;
+        conversationContainer.scrollTop = 0;
+
+        filtered.forEach(message => {
+            const article = document.createElement("article");
+            article.className = `message ${message.role}`;
+            article.innerHTML = `
+                <div class="text">${highlightHTML(message.text, trimmedFilter)}</div>
+                <div class="meta">${message.role === "assistant" ? "پاسخ سیستم" : "کاربر"} · ${message.timestamp}</div>
+                ${message.tags.length ? renderTags(message.tags, trimmedFilter) : ""}
+            `;
+            conversationContainer.appendChild(article);
+        });
+    }
+
+    function renderTags(tags, filterText) {
+        return `
+            <div class="tags">
+                ${tags.map(tag => `<span class="tag">${highlightPlainText(tag, filterText)}</span>`).join("")}
+            </div>
+        `;
+    }
+
+    function highlightHTML(html, filterText) {
+        if (!filterText) {
+            return html;
+        }
+
+        const template = document.createElement("template");
+        template.innerHTML = html;
+
+        const walker = document.createTreeWalker(
+            template.content,
+            NodeFilter.SHOW_TEXT,
+            null
+        );
+
+        const pattern = new RegExp(`(${escapeRegExp(filterText)})`, "gi");
+        const textNodes = [];
+
+        while (walker.nextNode()) {
+            textNodes.push(walker.currentNode);
+        }
+
+        textNodes.forEach(node => {
+            const value = node.nodeValue;
+            if (!value) {
+                return;
+            }
+
+            pattern.lastIndex = 0;
+            if (!pattern.test(value)) {
+                return;
+            }
+
+            const span = document.createElement("span");
+            pattern.lastIndex = 0;
+            span.innerHTML = value.replace(pattern, "<mark>$1</mark>");
+
+            const fragment = document.createDocumentFragment();
+            while (span.firstChild) {
+                fragment.appendChild(span.firstChild);
+            }
+
+            node.replaceWith(fragment);
+        });
+
+        return template.innerHTML;
+    }
+
+    function highlightPlainText(text, filterText) {
+        if (!filterText) {
+            return text;
+        }
+
+        const pattern = new RegExp(`(${escapeRegExp(filterText)})`, "gi");
+        return text.replace(pattern, "<mark>$1</mark>");
+    }
+
+    function escapeRegExp(value) {
+        return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    searchInput.addEventListener("input", (event) => {
+        renderMessages(event.target.value);
+    });
+
+    renderMessages();
+</script>
+</body>
+</html>
